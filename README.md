@@ -14,7 +14,7 @@ The "game board" is the patient monitor, and winning means the patient survives.
 ##  Project Structure
 
 ```
-rele_rl_summative/
+Relebohile_rl_summative/
 ├── environment/
 │   ├── custom_env.py        # ICU Sepsis Gymnasium environment
 │   └── rendering.py         # Pygame ICU patient monitor dashboard
