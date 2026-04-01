@@ -1,4 +1,4 @@
-## ICU Sepsis Treatment RL Agent
+# ICU Sepsis Treatment RL Agent
 
 ---
 
@@ -6,7 +6,7 @@
 The agent acts as an AI doctor in a simulated ICU, observing a sepsis patient's
 vital signs every timestep and choosing a treatment action to bring all vitals
 into the safe recovery range. Unlike video game RL agents that move around a
-screen, this agent is invisible — it represents an AI clinical decision system.
+screen, this agent is invisible; it represents an AI clinical decision system.
 The "game board" is the patient monitor, and winning means the patient survives.
 
 ---
@@ -145,7 +145,7 @@ python main.py --no-render    # terminal only, no GUI
 
 ---
 
-## 🖥️ Live Simulation Results (DQN Run 1)
+##  Live Simulation Results (DQN Run 1)
 
 ```
 Episode 1: TIMEOUT  | Steps: 100 | Reward: 674.4
@@ -156,7 +156,7 @@ Average: 605.18 ± 76.57 | Recovered: 2/3 | Deaths: 0/3
 
 ---
 
-## 📋 Requirements
+##  Requirements
 
 ```
 gymnasium>=0.29.0
