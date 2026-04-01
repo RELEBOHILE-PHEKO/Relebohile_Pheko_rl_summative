@@ -137,11 +137,11 @@ python main.py --no-render    # terminal only, no GUI
 
 ##  Key Findings
 
-- **DQN performed best** — experience replay and target networks provide stable learning
-- **REINFORCE surprised** — Run 9 with shorter rollouts (n_steps=50) beat all PPO runs
-- **PPO underperformed** — conservative updates were too slow within 100k timesteps
-- **Lower gamma (0.95)** improved both PPO and REINFORCE — immediate vital stabilisation matters more than long-term planning in sepsis
-- **The trained agent shows deliberate clinical behaviour** — oxygen therapy first, then antibiotics to clear infection, then IV fluids to raise BP — mirroring real ICU protocols
+- **DQN performed best**: experience replay and target networks provide stable learning
+- **REINFORCE surprised** : Run 9 with shorter rollouts (n_steps=50) beat all PPO runs
+- **PPO underperformed**:conservative updates were too slow within 100k timesteps
+- **Lower gamma (0.95)** improved both PPO and REINFORCE: immediate vital stabilisation matters more than long-term planning in sepsis
+- **The trained agent shows deliberate clinical behaviour**: oxygen therapy first, then antibiotics to clear infection, then IV fluids to raise BP — mirroring real ICU protocols
 
 ---
 
