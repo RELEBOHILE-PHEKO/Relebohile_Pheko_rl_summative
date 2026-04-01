@@ -31,7 +31,7 @@ rele_rl_summative/
 │   └── pg/                  # pg_results.json + pg_comparison.png
 ├── notebooks/
 │   ├── analysis.ipynb       # Reward curves and model comparison plots
-│   └── debugging.ipynb      # Quick environment testing
+│   
 ├── main.py                  # Run best model with Pygame GUI + terminal
 ├── random_agent.py          # Random agent demo (no model, no training)
 ├── requirements.txt
