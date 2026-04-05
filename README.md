@@ -2,7 +2,7 @@
 
 ---
 
-##  Mission
+##  Overview
 The agent acts as an AI doctor in a simulated ICU, observing a sepsis patient's
 vital signs every timestep and choosing a treatment action to bring all vitals
 into the safe recovery range. Unlike video game RL agents that move around a
