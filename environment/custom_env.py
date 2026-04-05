@@ -2,9 +2,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 
-# environment for ICU sepsis treatment
-# the agent learns how to stabilise a patient by controlling vital signs
-
+# Action labels for readability (used in logs/debugging)
 ACTION_NAMES = {
     0: "Do Nothing",
     1: "IV Fluids",
@@ -13,52 +11,65 @@ ACTION_NAMES = {
     4: "Vasopressors",
 }
 
-# healthy ranges for each vital
+# Healthy target ranges for each vital sign
 TARGETS = {
-    "heart_rate": (70, 100),
+    "heart_rate":     (70, 100),
     "blood_pressure": (110, 130),
-    "oxygen": (95, 100),
-    "lactate": (0, 2),
-    "infection": (0, 2),
+    "oxygen":         (95, 100),
+    "lactate":        (0, 2),
+    "infection":      (0, 2),
 }
 
-# calculates how far a value is from a healthy range
-def _dist_to_range(value, lo, hi):
-    if lo <= value <= hi:
+def distance_to_range(value, low, high):
+    """
+    Returns how far a value is from a healthy range.
+    If already inside the range → distance = 0
+    """
+    if low <= value <= high:
         return 0.0
-    return float(min(abs(value - lo), abs(value - hi)))
+    return float(min(abs(value - low), abs(value - high)))
 
 
 class SepsisEnv(gym.Env):
+    """
+    Custom ICU environment for sepsis treatment.
+
+    The agent's goal:
+    Keep all patient vitals within healthy ranges
+    using appropriate medical interventions.
+    """
+
     metadata = {"render_modes": ["human"], "render_fps": 10}
 
     def __init__(self, render_mode=None):
         super().__init__()
+
         self.render_mode = render_mode
         self.renderer = None
 
-        # 5 possible treatment actions
+        # 5 discrete treatment actions
         self.action_space = spaces.Discrete(5)
 
-        # observation includes vitals + time, all normalised
+        # Observations are normalized between 0 and 1
         self.observation_space = spaces.Box(
             low=np.zeros(6, dtype=np.float32),
             high=np.ones(6, dtype=np.float32),
             dtype=np.float32,
         )
 
-        # used for scaling values between 0 and 1
-        self._raw_low = np.array([30, 50, 70, 0, 0, 0], dtype=np.float32)
-        self._raw_high = np.array([180, 200, 100, 10, 10, 100], dtype=np.float32)
+        # Raw physiological ranges (used for normalization)
+        self.raw_low  = np.array([30,  50,  70, 0, 0,   0], dtype=np.float32)
+        self.raw_high = np.array([180, 200, 100, 10, 10, 150], dtype=np.float32)
 
-        self._prev_dist = None
+        self.previous_distance = None
         self.reset()
 
-    # converts raw values to a 0–1 range
-    def _normalise(self, raw):
-        return (raw - self._raw_low) / (self._raw_high - self._raw_low + 1e-8)
+    def normalize(self, values):
+        """Scale raw values into [0,1] range"""
+        return (values - self.raw_low) / (self.raw_high - self.raw_low + 1e-8)
 
-    def _get_obs(self):
+    def get_observation(self):
+        """Return current patient state (normalized)"""
         raw = np.array([
             self.heart_rate,
             self.blood_pressure,
@@ -68,144 +79,166 @@ class SepsisEnv(gym.Env):
             float(self.time),
         ], dtype=np.float32)
 
-        return np.clip(self._normalise(raw), 0.0, 1.0)
+        return np.clip(self.normalize(raw), 0.0, 1.0).astype(np.float32)
 
-    # initialise a new patient in an unstable condition
     def reset(self, seed=None, options=None):
+        """Initialize a new patient with unstable vitals"""
         super().reset(seed=seed)
 
-        self.heart_rate = float(np.random.uniform(100, 130))
+        self.heart_rate     = float(np.random.uniform(100, 130))
         self.blood_pressure = float(np.random.uniform(75, 100))
-        self.oxygen = float(np.random.uniform(88, 94))
-        self.lactate = float(np.random.uniform(2, 5))
-        self.infection = float(np.random.uniform(4, 7))
+        self.oxygen         = float(np.random.uniform(88, 94))
+        self.lactate        = float(np.random.uniform(2, 5))
+        self.infection      = float(np.random.uniform(4, 7))
         self.time = 0
 
-        self._prev_dist = self._total_distance()
-        return self._get_obs(), {}
+        self.previous_distance = self.total_distance()
+        return self.get_observation(), {}
 
-    # total deviation from healthy ranges
-    def _total_distance(self):
+    def total_distance(self):
+        """Sum of distances from all healthy ranges"""
         vitals = [
-            (self.heart_rate, *TARGETS["heart_rate"]),
+            (self.heart_rate,     *TARGETS["heart_rate"]),
             (self.blood_pressure, *TARGETS["blood_pressure"]),
-            (self.oxygen, *TARGETS["oxygen"]),
-            (self.lactate, *TARGETS["lactate"]),
-            (self.infection, *TARGETS["infection"]),
+            (self.oxygen,         *TARGETS["oxygen"]),
+            (self.lactate,        *TARGETS["lactate"]),
+            (self.infection,      *TARGETS["infection"]),
         ]
-        return sum(_dist_to_range(v, lo, hi) for v, lo, hi in vitals)
+
+        return sum(distance_to_range(v, lo, hi) for v, lo, hi in vitals)
 
     def step(self, action):
+        """Apply action and simulate one timestep"""
         self.time += 1
 
-        # natural progression of illness
-        self.heart_rate += np.random.normal(0.0, 0.5)
+        #  Natural disease progression 
+        self.heart_rate     += np.random.normal(0.0, 0.5)
         self.blood_pressure -= np.random.normal(0.3, 0.3)
-        self.oxygen -= np.random.normal(0.1, 0.1)
-        self.lactate += np.random.normal(0.05, 0.05)
-        self.infection -= np.random.uniform(0.0, 0.1)
+        self.oxygen         -= np.random.normal(0.05, 0.05)
+        self.lactate        += np.random.normal(0.05, 0.05)
+        self.infection      -= np.random.uniform(0.0, 0.1)
 
-        # treatment effects
-        if action == 0:
-            self.heart_rate -= np.random.uniform(0.0, 0.5)
+        # Small stabilizing effects 
+        if self.oxygen < 93:
+            self.oxygen += np.random.uniform(0.0, 0.25)
 
-        elif action == 1:
-            self.blood_pressure += np.random.uniform(4, 8)
-            self.lactate -= np.random.uniform(0.3, 0.7)
-            self.heart_rate -= np.random.uniform(0.5, 2.0)
+        if self.blood_pressure > 130:
+            excess = self.blood_pressure - 130
+            self.blood_pressure -= np.random.uniform(0.5, 1.5) * (1 + excess / 50)
 
-        elif action == 2:
-            self.infection -= np.random.uniform(1.0, 2.0)
-            self.lactate -= np.random.uniform(0.2, 0.5)
+        if self.heart_rate < 60:
+            self.heart_rate += np.random.uniform(0.5, 1.5)
+
+        # Prevent unnecessary vasopressors
+        if action == 4 and self.blood_pressure > 120:
+            action = 0
+
+        #  Treatment effects 
+        if action == 0:  # Do nothing
+            if self.heart_rate < 65:
+                self.heart_rate += np.random.uniform(0.0, 0.8)
+            else:
+                self.heart_rate -= np.random.uniform(0.0, 0.5)
+
+        elif action == 1:  # IV Fluids
+            boost = np.random.uniform(4, 8) if self.blood_pressure < 120 else np.random.uniform(0, 2)
+            self.blood_pressure += boost
+            self.lactate        -= np.random.uniform(0.3, 0.7)
+            self.heart_rate     -= np.random.uniform(0.5, 2.0)
+
+        elif action == 2:  # Antibiotics
+            self.infection  -= np.random.uniform(1.0, 2.0)
+            self.lactate    -= np.random.uniform(0.2, 0.5)
             self.heart_rate -= np.random.uniform(0.5, 1.5)
 
-        elif action == 3:
-            self.oxygen += np.random.uniform(3, 6)
+        elif action == 3:  # Oxygen
+            self.oxygen     += np.random.uniform(3, 6)
             self.heart_rate -= np.random.uniform(0.5, 2.0)
 
-        elif action == 4:
+        elif action == 4:  # Vasopressors
             self.blood_pressure += np.random.uniform(6, 12)
-            self.heart_rate += np.random.uniform(1, 3)
+            self.heart_rate     += np.random.uniform(1, 3)
 
-        # keep values within realistic limits
-        self.heart_rate = float(np.clip(self.heart_rate, 30, 180))
+        #  Keep values realistic 
+        self.heart_rate     = float(np.clip(self.heart_rate,     30, 180))
         self.blood_pressure = float(np.clip(self.blood_pressure, 50, 200))
-        self.oxygen = float(np.clip(self.oxygen, 70, 100))
-        self.lactate = float(np.clip(self.lactate, 0, 10))
-        self.infection = float(np.clip(self.infection, 0, 10))
+        self.oxygen         = float(np.clip(self.oxygen,         70, 100))
+        self.lactate        = float(np.clip(self.lactate,        0, 10))
+        self.infection      = float(np.clip(self.infection,      0, 10))
 
-        # reward based on improvement towards healthy ranges
-        curr_dist = self._total_distance()
-        progress = self._prev_dist - curr_dist
-        reward = progress * 1.5
+        #  Reward calculation 
+        current_distance = self.total_distance()
+        progress = self.previous_distance - current_distance
 
-        # small penalty to encourage faster recovery
-        reward -= 0.5
+        reward = (progress * 1.5) - 0.5  # encourage improvement, penalize time
 
-        # bonus for each vital in healthy range
+        # Bonus for each vital in range
         in_range = [
-            TARGETS["heart_rate"][0] <= self.heart_rate <= TARGETS["heart_rate"][1],
+            TARGETS["heart_rate"][0]     <= self.heart_rate     <= TARGETS["heart_rate"][1],
             TARGETS["blood_pressure"][0] <= self.blood_pressure <= TARGETS["blood_pressure"][1],
-            TARGETS["oxygen"][0] <= self.oxygen <= TARGETS["oxygen"][1],
-            TARGETS["lactate"][0] <= self.lactate <= TARGETS["lactate"][1],
-            TARGETS["infection"][0] <= self.infection <= TARGETS["infection"][1],
+            TARGETS["oxygen"][0]         <= self.oxygen         <= TARGETS["oxygen"][1],
+            TARGETS["lactate"][0]        <= self.lactate        <= TARGETS["lactate"][1],
+            TARGETS["infection"][0]      <= self.infection      <= TARGETS["infection"][1],
         ]
 
         reward += sum(in_range) * 2.0
 
-        # penalties for dangerous states
+        # Oxygen penalty (continuous)
+        if self.oxygen < 95:
+            reward -= (95 - self.oxygen) * 0.4
+
+        # Safety penalties
         if self.blood_pressure < 75:
             reward -= (75 - self.blood_pressure) * 0.3
+        if self.blood_pressure > 140:
+            reward -= (self.blood_pressure - 140) * 0.2
+        if self.heart_rate < 60:
+            reward -= (60 - self.heart_rate) * 0.3
 
-        if self.oxygen < 88:
-            reward -= (88 - self.oxygen) * 0.5
+        self.previous_distance = current_distance
 
-        self._prev_dist = curr_dist
-
+        # Termination conditions 
         terminated = False
-        truncated = False
-        recovered = False
-        death = False
+        truncated  = False
+        recovered  = False
+        death      = False
 
-        # failure conditions
         if self.blood_pressure < 60 or self.oxygen < 80 or self.lactate > 9:
-            reward -= 100.0
+            reward -= 100
             terminated = True
             death = True
 
-        # success condition
         elif all(in_range):
-            reward += 200.0
+            reward += 200
             terminated = True
             recovered = True
 
-        # max time limit
-        if self.time >= 100:
+        if self.time >= 150:
             truncated = True
 
         info = {
-            "heart_rate": round(self.heart_rate, 1),
+            "heart_rate":     round(self.heart_rate, 1),
             "blood_pressure": round(self.blood_pressure, 1),
-            "oxygen": round(self.oxygen, 1),
-            "lactate": round(self.lactate, 2),
-            "infection": round(self.infection, 2),
-            "time": self.time,
-            "action_name": ACTION_NAMES[int(action)],
+            "oxygen":         round(self.oxygen, 1),
+            "lactate":        round(self.lactate, 2),
+            "infection":      round(self.infection, 2),
+            "time":           self.time,
+            "action_name":    ACTION_NAMES[int(action)],
             "in_range_count": sum(in_range),
-            "total_distance": round(curr_dist, 2),
-            "recovered": recovered,
-            "death": death,
+            "total_distance": round(current_distance, 2),
+            "recovered":      recovered,
+            "death":          death,
         }
 
         if self.render_mode == "human":
             self.render()
 
-        return self._get_obs(), reward, terminated, truncated, info
+        return self.get_observation(), reward, terminated, truncated, info
 
     def render(self):
+        """Optional visual ICU display"""
         if self.render_mode == "human":
             from environment.rendering import ICURenderer
-
             if self.renderer is None:
                 self.renderer = ICURenderer()
 

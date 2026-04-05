@@ -6,7 +6,9 @@
 The agent acts as an AI doctor in a simulated ICU, observing a sepsis patient's
 vital signs every timestep and choosing a treatment action to bring all vitals
 into the safe recovery range. Unlike video game RL agents that move around a
-screen, this agent is invisible; it represents an AI clinical decision system.
+screen, this agent is invisible and has no on-screen avatar. It represents an
+AI clinical decision system acting behind the monitor, where the "mission" is
+patient stabilisation rather than character movement.
 The "game board" is the patient monitor, and winning means the patient survives.
 
 ---
@@ -19,8 +21,8 @@ Relebohile_RL_Summative/
 │   ├── custom_env.py        # ICU Sepsis Gymnasium environment
 │   └── rendering.py         # Pygame ICU patient monitor dashboard
 ├── training/
-│   ├── train_dqn.py         # DQN — 10 hyperparameter runs
-│   └── train_pg.py          # PPO + REINFORCE — 10 runs each
+│   ├── dqn_training.py      # DQN — 10 hyperparameter runs
+│   └── pg_training.py       # PPO + REINFORCE — 10 runs each
 ├── models/
 │   ├── dqn/                 # Saved DQN models (run01–run10)
 │   └── pg/
@@ -29,9 +31,8 @@ Relebohile_RL_Summative/
 ├── logs/
 │   ├── dqn/                 # dqn_results.json + dqn_comparison.png
 │   └── pg/                  # pg_results.json + pg_comparison.png
-├── notebooks/
-│   ├── analysis.ipynb       # Reward curves and model comparison plots
-│   
+├── analysis.ipynb           # Reward curves and model comparison plots
+
 ├── main.py                  # Run best model with Pygame GUI + terminal
 ├── random_agent.py          # Random agent demo (no model, no training)
 ├── requirements.txt
@@ -59,12 +60,12 @@ python random_agent.py
 
 ### 2. Train DQN (10 hyperparameter runs)
 ```bash
-python training/train_dqn.py
+python training/dqn_training.py
 ```
 
 ### 3. Train PPO + REINFORCE (10 runs each)
 ```bash
-python training/train_pg.py
+python training/pg_training.py
 ```
 
 ### 4. Run best agent with Pygame GUI
@@ -74,9 +75,9 @@ python main.py
 
 ### 5. Run specific model
 ```bash
-python main.py --algo dqn --run 1
-python main.py --algo ppo --run 4
-python main.py --algo reinforce --run 9
+python main.py --algo dqn --run 8
+python main.py --algo ppo --run 5
+python main.py --algo reinforce --run 6
 python main.py --episodes 5
 python main.py --no-render    # terminal only, no GUI
 ```
@@ -89,7 +90,7 @@ python main.py --no-render    # terminal only, no GUI
 |-----------|--------|
 | Observation space | 6 normalised vitals: HR, BP, O2, Lactate, Infection, Time |
 | Action space | 5 discrete treatment actions |
-| Max steps per episode | 100 |
+| Max steps per episode | 150 |
 | Success condition | All 5 vitals in healthy range simultaneously (+200 reward) |
 | Failure condition | BP < 60, O2 < 80, or Lactate > 9 (−100 reward) |
 | BP fix | BP drifts down naturally above 130 mmHg to prevent overshoot |
@@ -120,39 +121,51 @@ python main.py --no-render    # terminal only, no GUI
 
 | Algorithm | Type | Runs | Best Run | Mean Reward | Std |
 |-----------|------|------|----------|-------------|-----|
-| **DQN** | Value-Based | 10 | Run 1 | **570.13** | 79.64 |
-| **REINFORCE** | Policy Gradient | 10 | Run 9 | 495.07 | 119.98 |
-| **PPO** | Policy Gradient | 10 | Run 4 | 351.19 | 59.32 |
+| **PPO** | Policy Gradient | 10 | Run 5 | **672.01** | 57.89 |
+| **DQN** | Value-Based | 10 | Run 8 | 598.55 | 297.48 |
+| **REINFORCE** | Policy Gradient | 10 | Run 6 | 586.91 | 124.11 |
 
-**DQN Best Hyperparameters (Run 1):**
-- Learning Rate: 1e-4 | Gamma: 0.99 | Batch: 64 | Buffer: 100k | Exploration: 0.15
+**DQN Best Hyperparameters (Run 8):**
+- Learning Rate: 5e-4 | Gamma: 0.99 | Batch: 128 | Buffer: 200k | Exploration: 0.15
 
-**REINFORCE Best Hyperparameters (Run 9):**
-- Learning Rate: 2e-3 | Gamma: 0.99 | n_steps: 50 | Entropy: 0.01
+**REINFORCE Best Hyperparameters (Run 6):**
+- Learning Rate: 1e-3 | Gamma: 0.99 | n_steps: 100 | Entropy: 0.05
 
-**PPO Best Hyperparameters (Run 4):**
-- Learning Rate: 3e-4 | Gamma: 0.95 | Clip: 0.2 | Entropy: 0.01 | n_steps: 256
+**PPO Best Hyperparameters (Run 5):**
+- Learning Rate: 3e-4 | Gamma: 0.99 | Clip: 0.2 | Entropy: 0.05 | n_steps: 256
 
 ---
 
 ##  Key Findings
 
-- **DQN performed best**: experience replay and target networks provide stable learning
-- **REINFORCE surprised** : Run 9 with shorter rollouts (n_steps=50) beat all PPO runs
-- **PPO underperformed**:conservative updates were too slow within 100k timesteps
-- **Lower gamma (0.95)** improved both PPO and REINFORCE: immediate vital stabilisation matters more than long-term planning in sepsis
+- **PPO performed best overall**: Run 5 reached the top reward (672.01), with Run 6 close behind (669.35)
+- **DQN remained strong but less stable**: best DQN reached 598.55, with larger variance across runs
+- **REINFORCE achieved high reward but was highly sensitive**: best run reached 586.91, while some settings were negative
+- **Entropy mattered for policy-gradient methods in this setup**: PPO Run 5 and REINFORCE Run 6 both used higher entropy regularisation (0.05)
+- **Latest rollout check shows a policy-stalling pattern for PPO Run 5**: agent maintained safety but timed out in all 3 test episodes
 - **The trained agent shows deliberate clinical behaviour**: oxygen therapy first, then antibiotics to clear infection, then IV fluids to raise BP — mirroring real ICU protocols
 
 ---
 
-##  Live Simulation Results (DQN Run 1)
+##  Live Simulation Example (PPO Run 5)
 
 ```
-Episode 1: TIMEOUT  | Steps: 100 | Reward: 674.4
-Episode 2: RECOVERED | Steps:  62 | Reward: 642.7 
-Episode 3: RECOVERED | Steps:  36 | Reward: 498.4 
-Average: 605.18 ± 76.57 | Recovered: 2/3 | Deaths: 0/3
+Episode 1: TIMEOUT | Steps: 150 | Reward: 619.6
+Episode 2: TIMEOUT | Steps: 150 | Reward: 723.2
+Episode 3: TIMEOUT | Steps: 150 | Reward: 618.0
+Average: 653.59 ± 49.24 | Recovered: 0/3 | Deaths: 0/3
 ```
+
+##  Random Baseline Simulation (Latest Run)
+
+```
+Episode 1: RECOVERED | Steps: 40 | Reward: 541.1
+Episode 2: RECOVERED | Steps: 37 | Reward: 488.3
+Episode 3: RECOVERED | Steps: 20 | Reward: 370.3
+Average: 466.57 | Recovered: 3/3 | Deaths: 0/3
+```
+
+This side-by-side rollout evidence is included for transparency and helps motivate further reward-shaping/termination tuning.
 
 ---
 

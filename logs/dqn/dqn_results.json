@@ -8,8 +8,8 @@
     "exploration_fraction": 0.15,
     "target_update_interval": 200,
     "train_freq": 1,
-    "mean_reward": 570.13,
-    "std_reward": 79.64,
+    "mean_reward": 503.51,
+    "std_reward": 205.09,
     "model_path": "models/dqn\\dqn_run01"
   },
   {
@@ -21,8 +21,8 @@
     "exploration_fraction": 0.15,
     "target_update_interval": 200,
     "train_freq": 1,
-    "mean_reward": 360.14,
-    "std_reward": 56.53,
+    "mean_reward": 413.55,
+    "std_reward": 97.66,
     "model_path": "models/dqn\\dqn_run02"
   },
   {
@@ -34,8 +34,8 @@
     "exploration_fraction": 0.15,
     "target_update_interval": 200,
     "train_freq": 1,
-    "mean_reward": 523.64,
-    "std_reward": 42.77,
+    "mean_reward": 439.99,
+    "std_reward": 183.75,
     "model_path": "models/dqn\\dqn_run03"
   },
   {
@@ -47,8 +47,8 @@
     "exploration_fraction": 0.15,
     "target_update_interval": 200,
     "train_freq": 1,
-    "mean_reward": 326.72,
-    "std_reward": 47.42,
+    "mean_reward": 350.36,
+    "std_reward": 54.39,
     "model_path": "models/dqn\\dqn_run04"
   },
   {
@@ -60,8 +60,8 @@
     "exploration_fraction": 0.15,
     "target_update_interval": 200,
     "train_freq": 1,
-    "mean_reward": 449.26,
-    "std_reward": 135.81,
+    "mean_reward": 528.26,
+    "std_reward": 226.73,
     "model_path": "models/dqn\\dqn_run05"
   },
   {
@@ -73,8 +73,8 @@
     "exploration_fraction": 0.1,
     "target_update_interval": 200,
     "train_freq": 1,
-    "mean_reward": 350.71,
-    "std_reward": 76.66,
+    "mean_reward": 366.28,
+    "std_reward": 92.3,
     "model_path": "models/dqn\\dqn_run06"
   },
   {
@@ -86,8 +86,8 @@
     "exploration_fraction": 0.25,
     "target_update_interval": 200,
     "train_freq": 1,
-    "mean_reward": 380.31,
-    "std_reward": 69.06,
+    "mean_reward": 387.18,
+    "std_reward": 94.09,
     "model_path": "models/dqn\\dqn_run07"
   },
   {
@@ -99,8 +99,8 @@
     "exploration_fraction": 0.15,
     "target_update_interval": 100,
     "train_freq": 1,
-    "mean_reward": 525.59,
-    "std_reward": 84.8,
+    "mean_reward": 598.55,
+    "std_reward": 297.48,
     "model_path": "models/dqn\\dqn_run08"
   },
   {
@@ -112,8 +112,8 @@
     "exploration_fraction": 0.12,
     "target_update_interval": 50,
     "train_freq": 1,
-    "mean_reward": 376.63,
-    "std_reward": 76.39,
+    "mean_reward": 385.75,
+    "std_reward": 65.18,
     "model_path": "models/dqn\\dqn_run09"
   },
   {
@@ -125,8 +125,8 @@
     "exploration_fraction": 0.12,
     "target_update_interval": 100,
     "train_freq": 1,
-    "mean_reward": 391.95,
-    "std_reward": 82.29,
+    "mean_reward": 481.93,
+    "std_reward": 164.81,
     "model_path": "models/dqn\\dqn_run10"
   }
 ]
